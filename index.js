@@ -3,6 +3,9 @@ var async = require('async');
 var AWS = require('aws-sdk');
 var util = require('util');
 var sharp = require('sharp');
+var fs = require('fs');
+var execSync = require('child_process').execSync;
+process.env.PATH += ':/var/task/bin';
 
 // get reference to S3 client
 var s3 = new AWS.S3();
@@ -13,8 +16,12 @@ exports.handler = function(event, context, callback) {
     var srcBucket = event.Records[0].s3.bucket.name;
     // Object key may have spaces or unicode non-ASCII characters.
     var srcKey    = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, " "));
+    console.log('srckey:' + srcKey);
+    var fullFilename = srcKey.split('/')[srcKey.split('/').length - 1];
+    var extension = srcKey.split('/')[srcKey.split('/').length - 1].split('.')[1];
+    var	filename  = srcKey.split('/')[srcKey.split('/').length - 1].split('.')[0];
     var dstBucket = srcBucket + "-resized";
-    var dstKey    = "resized-" + srcKey;
+    var dstKey    = srcKey;
 
     // Sanity check: validate that source and destination are different buckets.
     if (srcBucket == dstBucket) {
@@ -29,7 +36,7 @@ exports.handler = function(event, context, callback) {
         return;
     }
     var imageType = typeMatch[1].toLowerCase();
-    if (imageType != "jpg" && imageType != "png") {
+    if (imageType != "jpg" && imageType != "png" && imageType != "jpeg" && imageType != "gif" && imageType != "mp4" && imageType != "m4v") {
         callback(`Unsupported image type: ${imageType}`);
         return;
     }
@@ -47,19 +54,39 @@ exports.handler = function(event, context, callback) {
         function transform(response, next) {
             // set thumbnail width. Resize will set height automatically 
             // to maintain aspect ratio.
-            var width  = 200;
-
+	    // Transform the video to image
+	    if(imageType == "mp4" || imageType == "m4v" ){
+                console.log("create video screenshot start:");
+	        fs.writeFileSync('/tmp/' + filename + '.' + extension, response.Body);
+	        execSync('ffmpeg -i /tmp/' + filename + '.' + extension +' -ss 00:00:01 -vframes 1 /tmp/' + filename +'.jpg');
+	       
+                var resultFile = fs.createReadStream('/tmp/' + filename + '.jpg');
+                console.log("create screenshotImage successfully");
+                dstKey = dstKey.replace(fullFilename, filename + '.jpg');
+                console.log(dstKey)
+                next(null, "image/jpg",resultFile);
+            } else {
+	    
             // Transform the image buffer in memory.
-            sharp(response.Body)
-               .resize(width)
-                   .toBuffer(imageType, function(err, buffer) {
-                        if (err) {
-                            next(err);
-                        } else {
-                            next(null, response.ContentType, buffer);
-                        }
-                    });
+		if (imageType == 'gif') {
+		    dstKey = dstKey.replace(fullFilename, filename + '.jpg');
+		}
+                sharp(response.Body)
+                   .resize({
+		       width: 150,
+		       height: 150,
+		       fit: sharp.fit.inside
+		   })
+                       .toBuffer((imageType != 'gif' ? imageType : 'image/jpg'), function(err, buffer) {
+                            if (err) {
+                                next(err);
+                            } else {
+                                next(null, (imageType != 'gif' ? response.ContentType : 'image/jpg'), buffer);
+                            }
+                        });
+      		 }
         },
+
         function upload(contentType, data, next) {
             // Stream the transformed image to a different S3 bucket.
             s3.putObject({
