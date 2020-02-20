@@ -105,7 +105,7 @@ exports.handler = function (event, context, callback) {
                     Body: data,
                     ContentType: contentType
                 },
-                next(null, 'upload finished'));
+                next(null,'upload file '));
         },
         function deleteFile(data, next) {
             if (imageType == "mp4" || imageType == "m4v") {
