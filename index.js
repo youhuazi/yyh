@@ -10,18 +10,18 @@ process.env.PATH += ':/var/task/bin';
 // get reference to S3 client
 var s3 = new AWS.S3();
 
-exports.handler = function(event, context, callback) {
+exports.handler = function (event, context, callback) {
     // Read options from the event.
     console.log("Reading options from event:\n", util.inspect(event, {depth: 5}));
     var srcBucket = event.Records[0].s3.bucket.name;
     // Object key may have spaces or unicode non-ASCII characters.
-    var srcKey    = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, " "));
+    var srcKey = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, " "));
     console.log('srckey:' + srcKey);
     var fullFilename = srcKey.split('/')[srcKey.split('/').length - 1];
     var extension = srcKey.split('/')[srcKey.split('/').length - 1].split('.')[1];
-    var	filename  = srcKey.split('/')[srcKey.split('/').length - 1].split('.')[0];
+    var filename = srcKey.split('/')[srcKey.split('/').length - 1].split('.')[0];
     var dstBucket = srcBucket + "-resized";
-    var dstKey    = srcKey;
+    var dstKey = srcKey;
 
     // Sanity check: validate that source and destination are different buckets.
     if (srcBucket == dstBucket) {
@@ -50,41 +50,41 @@ exports.handler = function(event, context, callback) {
                     Key: srcKey
                 },
                 next);
-            },
+        },
         function transform(response, next) {
-            // set thumbnail width. Resize will set height automatically 
+            // set thumbnail width. Resize will set height automatically
             // to maintain aspect ratio.
-	    // Transform the video to image
-	    if(imageType == "mp4" || imageType == "m4v" ){
+            // Transform the video to image
+            if (imageType == "mp4" || imageType == "m4v") {
                 console.log("create video screenshot start:");
-	        fs.writeFileSync('/tmp/' + filename + '.' + extension, response.Body);
-	        execSync('ffmpeg -i /tmp/' + filename + '.' + extension +' -ss 00:00:01 -vframes 1 /tmp/' + filename +'.jpg');
-	       
+                fs.writeFileSync('/tmp/' + filename + '.' + extension, response.Body);
+                execSync('ffmpeg -i /tmp/' + filename + '.' + extension + ' -ss 00:00:01 -vframes 1 /tmp/' + filename + '.jpg');
+
                 var resultFile = fs.createReadStream('/tmp/' + filename + '.jpg');
                 console.log("create screenshotImage successfully");
                 dstKey = dstKey.replace(fullFilename, filename + '.jpg');
                 console.log(dstKey)
-                next(null, "image/jpg",resultFile);
+                next(null, "image/jpg", resultFile);
             } else {
-	    
-            // Transform the image buffer in memory.
-		if (imageType == 'gif') {
-		    dstKey = dstKey.replace(fullFilename, filename + '.jpg');
-		}
+
+                // Transform the image buffer in memory.
+                if (imageType == 'gif') {
+                    dstKey = dstKey.replace(fullFilename, filename + '.jpg');
+                }
                 sharp(response.Body)
-                   .resize({
-		       width: 150,
-		       height: 150,
-		       fit: sharp.fit.inside
-		   })
-                       .toBuffer((imageType != 'gif' ? imageType : 'image/jpg'), function(err, buffer) {
-                            if (err) {
-                                next(err);
-                            } else {
-                                next(null, (imageType != 'gif' ? response.ContentType : 'image/jpg'), buffer);
-                            }
-                        });
-      		 }
+                    .resize({
+                        width: 150,
+                        height: 150,
+                        fit: sharp.fit.inside
+                    })
+                    .toBuffer((imageType != 'gif' ? imageType : 'image/jpg'), function (err, buffer) {
+                        if (err) {
+                            next(err);
+                        } else {
+                            next(null, (imageType != 'gif' ? response.ContentType : 'image/jpg'), buffer);
+                        }
+                    });
+            }
         },
 
         function upload(contentType, data, next) {
@@ -96,7 +96,7 @@ exports.handler = function(event, context, callback) {
                     ContentType: contentType
                 },
                 next);
-            }
+        }
         ], function (err) {
             if (err) {
                 console.error(
