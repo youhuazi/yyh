@@ -120,6 +120,7 @@ exports.handler = function (event, context, callback) {
                     next(err);
                 }
             }
+            next(null,'done');
 
         }
         ], function (err) {
