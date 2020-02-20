@@ -18,10 +18,8 @@ exports.handler = function (event, context, callback) {
     var srcBucket = event.Records[0].s3.bucket.name;
     // Object key may have spaces or unicode non-ASCII characters.
     var srcKey = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, " "));
-    console.log('srckey:' + srcKey);
     var fullFilename = srcKey.split('/')[srcKey.split('/').length - 1];
-    var extension =fullFilename.split('.')[fullFilename.split('.').length - 1];
-    var filename = fullFilename.substr(0,(fullFilename.length-extension.length-1));
+    var extension = fullFilename.split('.')[fullFilename.split('.').length - 1];
     var dstBucket = srcBucket + "-resized";
     var dstKey = srcKey;
 
@@ -54,23 +52,21 @@ exports.handler = function (event, context, callback) {
                 next);
         },
         function transform(response, next) {
-            // set thumbnail width. Resize will set height automatically
-            // to maintain aspect ratio.
             // Transform the video to image
             if (imageType == "mp4" || imageType == "m4v") {
                 console.log("create video screenshot start:");
-                fs.writeFileSync('/tmp/video.' +imageType, response.Body);
-                execSync('ffmpeg -i /tmp/video.' +imageType  + " -ss 00:00:01 -vframes 1 /tmp/screenShot.jpg");
+                fs.writeFileSync('/tmp/video.' + imageType, response.Body);
+                execSync('ffmpeg -i /tmp/video.' + imageType + " -ss 00:00:01 -vframes 1 /tmp/screenShot.jpg");
 
                 var resultFile = fs.createReadStream('/tmp/screenShot.jpg');
                 console.log("create screenshotImage successfully");
-                dstKey = dstKey.substr(0,(dstKey.length-extension.length)) + 'jpg';
+                dstKey = dstKey.substr(0, (dstKey.length - extension.length)) + 'jpg';
                 console.log(dstKey);
                 next(null, "image/jpg", resultFile);
             } else if (imageType == 'gif') {
 
                 // Transform the gif buffer in memory.
-                dstKey = dstKey.substr(0,(dstKey.length-extension.length)) + 'jpg';
+                dstKey = dstKey.substr(0, (dstKey.length - extension.length)) + 'jpg';
                 sharp(response.Body)
                     .resize({
                         width: 150,
@@ -92,7 +88,7 @@ exports.handler = function (event, context, callback) {
                         height: 150,
                         fit: sharp.fit.inside
                     })
-                    .toBuffer(imageType, function(err, buffer) {
+                    .toBuffer(imageType, function (err, buffer) {
                         if (err) {
                             next(err);
                         } else {
@@ -101,7 +97,6 @@ exports.handler = function (event, context, callback) {
                     });
             }
         },
-
         function upload(contentType, data, next) {
             // Stream the transformed image to a different S3 bucket.
             s3.putObject({
@@ -110,21 +105,23 @@ exports.handler = function (event, context, callback) {
                     Body: data,
                     ContentType: contentType
                 },
-                next(null,data));
+                next(null, 'upload finished'));
         },
-	function deleteFile(data, next) {
-		    if(imageType == "mp4" || imageType == "m4v"){
-			try{
-			    fs.unlinkSync('/tmp/video.' + imageType);
-                            fs.unlinkSync('/tmp/screenShot.jpg');
-                            console.log('file deleted');
-			    next(null,'finish');
-			} catch(err) {
-			next(err);
-			}
-		    }
-		   
-	} 
+        function deleteFile(data, next) {
+            if (imageType == "mp4" || imageType == "m4v") {
+                try {
+                    //deleted provisional video
+                    fs.unlinkSync('/tmp/video.' + imageType);
+                    //deleted provisional image
+                    fs.unlinkSync('/tmp/screenShot.jpg');
+                    console.log('file deleted');
+                    next(null, 'deleted fill');
+                } catch (err) {
+                    next(err);
+                }
+            }
+
+        }
         ], function (err) {
             if (err) {
                 console.error(
