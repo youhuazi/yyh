@@ -104,25 +104,25 @@ exports.handler = function (event, context, callback) {
                     Key: dstKey,
                     Body: data,
                     ContentType: contentType
-                },
-                next(null,'upload file '));
+                });
+            next(null,'upload file ');
         },
-        function deleteFile(data, next) {
-            if (imageType == "mp4" || imageType == "m4v") {
-                try {
-                    //deleted provisional video
-                    fs.unlinkSync('/tmp/video.' + imageType);
-                    //deleted provisional image
-                    fs.unlinkSync('/tmp/screenShot.jpg');
-                    console.log('file deleted');
-                    next(null, 'deleted fill');
-                } catch (err) {
-                    next(err);
-                }
-            }
-            next(null,'done');
-
-        }
+        // function deleteFile(data, next) {
+        //     if (imageType == "mp4" || imageType == "m4v") {
+        //         try {
+        //             //deleted provisional video
+        //             fs.unlinkSync('/tmp/video.' + imageType);
+        //             //deleted provisional image
+        //             fs.unlinkSync('/tmp/screenShot.jpg');
+        //             console.log('file deleted');
+        //             next(null, 'deleted fill');
+        //         } catch (err) {
+        //             next(err);
+        //         }
+        //     }
+        //     next(null,'done');
+        //
+        // }
         ], function (err) {
             if (err) {
                 console.error(
