@@ -1,4 +1,6 @@
 // dependencies
+// 画像のサムネイル画像を作成するためのsharpモジュール参考サイト：https://sharp.pixelplumbing.com/
+// 動画のサムネイル画像を作成するためのソフトウェアffmpegの参考サイト：https://www.ffmpeg.org/
 var async = require('async');
 var AWS = require('aws-sdk');
 var util = require('util');
@@ -18,8 +20,8 @@ exports.handler = function (event, context, callback) {
     var srcKey = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, " "));
     console.log('srckey:' + srcKey);
     var fullFilename = srcKey.split('/')[srcKey.split('/').length - 1];
-    var extension = srcKey.split('/')[srcKey.split('/').length - 1].split('.')[1];
-    var filename = srcKey.split('/')[srcKey.split('/').length - 1].split('.')[0];
+    var extension =fullFilename.split('.')[fullFilename.split('.').length - 1];
+    var filename = fullFilename.substr(0,(fullFilename.length-extension.length-1));
     var dstBucket = srcBucket + "-resized";
     var dstKey = srcKey;
 
@@ -57,31 +59,44 @@ exports.handler = function (event, context, callback) {
             // Transform the video to image
             if (imageType == "mp4" || imageType == "m4v") {
                 console.log("create video screenshot start:");
-                fs.writeFileSync('/tmp/' + filename + '.' + extension, response.Body);
-                execSync('ffmpeg -i /tmp/' + filename + '.' + extension + ' -ss 00:00:01 -vframes 1 /tmp/' + filename + '.jpg');
+                fs.writeFileSync('/tmp/' + fullFilename, response.Body);
+                execSync('ffmpeg -i /tmp/' + fullFilename + " -ss 00:00:01 -vframes 1 /tmp/" + filename + '.jpg');
 
                 var resultFile = fs.createReadStream('/tmp/' + filename + '.jpg');
                 console.log("create screenshotImage successfully");
-                dstKey = dstKey.replace(fullFilename, filename + '.jpg');
-                console.log(dstKey)
+                dstKey = dstKey.substr(0,(dstKey.length-extension.length)) + 'jpg';
+                console.log(dstKey);
                 next(null, "image/jpg", resultFile);
-            } else {
+            } else if (imageType == 'gif') {
 
-                // Transform the image buffer in memory.
-                if (imageType == 'gif') {
-                    dstKey = dstKey.replace(fullFilename, filename + '.jpg');
-                }
+                // Transform the gif buffer in memory.
+                dstKey = dstKey.substr(0,(dstKey.length-extension.length)) + 'jpg';
                 sharp(response.Body)
                     .resize({
                         width: 150,
                         height: 150,
                         fit: sharp.fit.inside
                     })
-                    .toBuffer((imageType != 'gif' ? imageType : 'image/jpg'), function (err, buffer) {
+                    .toBuffer('jpg', function (err, buffer) {
                         if (err) {
                             next(err);
                         } else {
-                            next(null, (imageType != 'gif' ? response.ContentType : 'image/jpg'), buffer);
+                            next(null, 'image/jpg', buffer);
+                        }
+                    });
+            } else {
+                // Transform the image buffer in memory.
+                sharp(response.Body)
+                    .resize({
+                        width: 150,
+                        height: 150,
+                        fit: sharp.fit.inside
+                    })
+                    .toBuffer(imageType, function(err, buffer) {
+                        if (err) {
+                            next(err);
+                        } else {
+                            next(null, response.ContentType, buffer);
                         }
                     });
             }
