@@ -59,10 +59,10 @@ exports.handler = function (event, context, callback) {
             // Transform the video to image
             if (imageType == "mp4" || imageType == "m4v") {
                 console.log("create video screenshot start:");
-                fs.writeFileSync('/tmp/' + fullFilename, response.Body);
-                execSync('ffmpeg -i /tmp/' + fullFilename + " -ss 00:00:01 -vframes 1 /tmp/" + filename + '.jpg');
+                fs.writeFileSync('/tmp/video.' +imageType, response.Body);
+                execSync('ffmpeg -i /tmp/video.' +imageType  + " -ss 00:00:01 -vframes 1 /tmp/screenShot.jpg");
 
-                var resultFile = fs.createReadStream('/tmp/' + filename + '.jpg');
+                var resultFile = fs.createReadStream('/tmp/screenShot.jpg');
                 console.log("create screenshotImage successfully");
                 dstKey = dstKey.substr(0,(dstKey.length-extension.length)) + 'jpg';
                 console.log(dstKey);
@@ -110,8 +110,21 @@ exports.handler = function (event, context, callback) {
                     Body: data,
                     ContentType: contentType
                 },
-                next);
-        }
+                next(null,data));
+        },
+	function deleteFile(data, next) {
+		    if(imageType == "mp4" || imageType == "m4v"){
+			try{
+			    fs.unlinkSync('/tmp/video.' + imageType);
+                            fs.unlinkSync('/tmp/screenShot.jpg');
+                            console.log('file deleted');
+			    next(null,'finish');
+			} catch(err) {
+			next(err);
+			}
+		    }
+		   
+	} 
         ], function (err) {
             if (err) {
                 console.error(
