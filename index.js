@@ -1,6 +1,7 @@
-// dependencies
+// Amazon S3でAWS Lambdaを使用するための参考サイト：https://docs.aws.amazon.com/ja_jp/lambda/latest/dg/with-s3-example.html
 // 画像のサムネイル画像を作成するためのsharpモジュール参考サイト：https://sharp.pixelplumbing.com/
 // 動画のサムネイル画像を作成するためのソフトウェアffmpegの参考サイト：https://www.ffmpeg.org/
+// dependencies
 var async = require('async');
 var AWS = require('aws-sdk');
 var util = require('util');
