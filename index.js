@@ -63,7 +63,7 @@ exports.handler = function (event, context, callback) {
                 console.log("create screenshotImage successfully");
                 dstKey = dstKey.substr(0, (dstKey.length - extension.length)) + 'jpg';
                 console.log(dstKey);
-		sharp('/tmp/screenShot.jpg')
+                sharp('/tmp/screenShot.jpg')
                     .resize({
                         width: 150,
                         height: 150,
@@ -113,11 +113,11 @@ exports.handler = function (event, context, callback) {
         function upload(contentType, data, next) {
             // Stream the transformed image to a different S3 bucket.
             s3.putObject({
-                    Bucket: dstBucket,
-                    Key: dstKey,
-                    Body: data,
-                    ContentType: contentType
-                },next);
+                Bucket: dstBucket,
+                Key: dstKey,
+                Body: data,
+                ContentType: contentType
+            }, next);
 
         },
         function deleteFile(response, next) {
@@ -128,30 +128,29 @@ exports.handler = function (event, context, callback) {
                     //deleted provisional image
                     fs.unlinkSync('/tmp/screenShot.jpg');
                     console.log('file deleted');
-                   // next(null, 'deleted fill');
                 } catch (err) {
-                   next(err);
+                    next(err);
                 }
             }
-            next(null,'done');
+            next(null, 'done');
 
         }
-        ], function (err) {
-            if (err) {
-                console.error(
-                    'Unable to resize ' + srcBucket + '/' + srcKey +
-                    ' and upload to ' + dstBucket + '/' + dstKey +
-                    ' due to an error: ' + err
-                );
-            } else {
-                console.log(
-                    'Successfully resized ' + srcBucket + '/' + srcKey +
-                    ' and uploaded to ' + dstBucket + '/' + dstKey
-                );
-            }
-
-            callback(null, "message");
-            
+    ], function (err) {
+        if (err) {
+            console.error(
+                'Unable to resize ' + srcBucket + '/' + srcKey +
+                ' and upload to ' + dstBucket + '/' + dstKey +
+                ' due to an error: ' + err
+            );
+        } else {
+            console.log(
+                'Successfully resized ' + srcBucket + '/' + srcKey +
+                ' and uploaded to ' + dstBucket + '/' + dstKey
+            );
         }
+
+        callback(null, "message");
+
+    }
     );
 };
