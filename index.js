@@ -59,11 +59,11 @@ exports.handler = function (event, context, callback) {
                 fs.writeFileSync('/tmp/video.' + imageType, response.Body);
                 execSync('ffmpeg -i /tmp/video.' + imageType + " -ss 00:00:01 -vframes 1 /tmp/screenShot.jpg");
 
-                var resultFile = fs.createReadStream('/tmp/screenShot.jpg');
+                var resultFile = fs.readFileSync('/tmp/screenShot.jpg');
                 console.log("create screenshotImage successfully");
                 dstKey = dstKey.substr(0, (dstKey.length - extension.length)) + 'jpg';
                 console.log(dstKey);
-                sharp('/tmp/screenShot.jpg')
+                sharp(resultFile)
                     .resize({
                         width: 150,
                         height: 150,
