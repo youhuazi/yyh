@@ -63,7 +63,19 @@ exports.handler = function (event, context, callback) {
                 console.log("create screenshotImage successfully");
                 dstKey = dstKey.substr(0, (dstKey.length - extension.length)) + 'jpg';
                 console.log(dstKey);
-                next(null, "image/jpg", resultFile);
+		sharp('/tmp/screenShot.jpg')
+                    .resize({
+                        width: 150,
+                        height: 150,
+                        fit: sharp.fit.inside
+                    })
+                    .toBuffer('jpg', function (err, buffer) {
+                        if (err) {
+                            next(err);
+                        } else {
+                            next(null, 'image/jpg', buffer);
+                        }
+                    });
             } else if (imageType == 'gif') {
 
                 // Transform the gif buffer in memory.
@@ -116,9 +128,9 @@ exports.handler = function (event, context, callback) {
                     //deleted provisional image
                     fs.unlinkSync('/tmp/screenShot.jpg');
                     console.log('file deleted');
-                    next(null, 'deleted fill');
+                   // next(null, 'deleted fill');
                 } catch (err) {
-                    next(err);
+                   next(err);
                 }
             }
             next(null,'done');
@@ -139,6 +151,7 @@ exports.handler = function (event, context, callback) {
             }
 
             callback(null, "message");
+            
         }
     );
 };
